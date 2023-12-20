@@ -16,11 +16,7 @@ def is_point_inside_circle(center_x, center_y, x_circum, y_circum, x_check, y_ch
     is_inside = circle.contains(third_point)
 
     # Print the result
-    if is_inside:
-        print("The third point is inside the circle.")
-    else:
-        print("The third point is outside the circle.")
-
+    return is_inside 
 
 def is_point_inside_rectangle(rect_a_x, rect_a_y, rect_b_x, rect_b_y, rect_c_x, rect_c_y, rect_d_x, rect_d_y, point_x, point_y):
     # Define the rectangle as a polygon

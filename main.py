@@ -90,23 +90,6 @@ class LaserTracker(object):
         )
         return self.capture
 
-    # def setup_video_capture(self, video_file):
-    #     """
-    #     Perform video setup using the specified video file.
-    #     Returns a reference to the video Capture object.
-    #     """
-    #     try:
-    #         sys.stdout.write(f"Using Video File: {video_file}\n")
-
-    #         # Try to start capturing frames from the video file
-    #         capture = cv2.VideoCapture(video_file)
-    #         if not capture.isOpened():
-    #                 sys.stderr.write("Failed to Open Video File. Quitting.\n")
-
-    #         return capture
-    #     except Exception as e:
-    #         sys.stderr.write(f"Error: {e}\n")
-
     def handle_quit(self, delay=10):
         """Quit the program if the user presses "Esc" or "q"."""
         key = cv2.waitKey(delay)
@@ -257,48 +240,42 @@ class LaserTracker(object):
             self.create_and_position_window('Value', 40, 40)
 
     def run(self):
-        # Set up window positions
         self.setup_windows()
-        # Set up the camera capture
-        self.setup_camera_capture()
+        self.capture = self.setup_camera_capture()
+        frame_index = 0
+
+        laser_coordinates_list = []  # Initialize an empty list to store coordinates
 
         while True:
-            # 1. capture the current image
             success, frame = self.capture.read()
-            if not success:  # no image captured... end the processing
-                sys.stderr.write("Could not read camera frame. Quitting\n")
+            if not success:
+                sys.stderr.write("Could not read video frame. Quitting\n")
                 sys.exit(1)
 
-            hsv_image = self.detect(frame)
+            hsv_image = self.detect(frame, frame_index)
+            coordinates = self.track(frame, self.channels['laser'])
             self.display(hsv_image, frame)
             self.handle_quit()
 
-    # def run(self, video_file):
-    #     self.setup_windows()
-    #     self.capture = self.setup_video_capture(video_file)
-    #     frame_index = 0
+            if coordinates is not None:
+                print("Laser Coordinates:", coordinates)
+                laser_coordinates_list.append(coordinates)
 
-    #     while True:
-    #         success, frame = self.capture.read()
-    #         if not success:
-    #             sys.stderr.write("Could not read video frame. Quitting\n")
-    #             sys.exit(1)
+                # Check if the laser goes out of the screen
+                # x, y = coordinates
+                sys.exit(0)
 
-    #         hsv_image = self.detect(frame, frame_index)
-    #         self.display(hsv_image, frame)
-    #         self.handle_quit()
+            if self.first_detection_frame_index is None and cv2.countNonZero(self.channels['laser']) > 0:
+                self.first_detection_frame_index = frame_index
+                self.first_detection_coordinates = coordinates  # Use the coordinates obtained in the track method
+                cv2.imwrite(f'first_detection_frame_{frame_index}.png', frame)
+                cv2.imwrite(f'first_detection_raw_image_{frame_index}.png', hsv_image)
 
-    #         if self.first_detection_frame_index is None and cv2.countNonZero(self.channels['laser']) > 0:
-    #             self.first_detection_frame_index = frame_index
-    #             self.first_detection_coordinates = self.track(frame, self.channels['laser'])
-    #             cv2.imwrite(f'first_detection_frame_{frame_index}.png', frame)
-    #             cv2.imwrite(f'first_detection_raw_image_{frame_index}.png', hsv_image)
+                # Save coordinates to a text file
+                with open('first_detection_coordinates.txt', 'w') as f:
+                    f.write(f'Coordinates: {self.first_detection_coordinates}')
 
-    #             # Save coordinates to a text file
-    #             with open('first_detection_coordinates.txt', 'w') as f:
-    #                 f.write(f'Coordinates: {self.first_detection_coordinates}')
-
-    #         frame_index += 1
+            frame_index += 1
 
 
 if __name__ == '__main__':
@@ -340,7 +317,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--display',
                         action='store_true',
                         help='Display Threshold Windows')
-    parser.add_argument('video_file', help='Input video file')
+    # parser.add_argument('video_file', help='Input video file')
     params = parser.parse_args()
 
     tracker = LaserTracker(
@@ -354,4 +331,4 @@ if __name__ == '__main__':
         val_max=params.valmax,
         display_thresholds=params.display
     )
-    tracker.run(params.video_file)
+    tracker.run()
