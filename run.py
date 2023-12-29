@@ -1,17 +1,16 @@
 import os
 import argparse
 import subprocess
-import signal
 import time
+
+SCORE = 0
 
 def run_command(command):
     try:
-        # Execute the command
         process = subprocess.Popen(command, shell=True)
         process.wait()
 
     except KeyboardInterrupt:
-        # If Ctrl+C is pressed, terminate the process gracefully
         process.terminate()
         try:
             process.wait(timeout=5)  # Wait for the process to terminate
@@ -30,7 +29,7 @@ if __name__ == "__main__":
         args = parser.parse_args()
 
         # Execute the first command
-        run_command("python main.py -W 640 -H 480 -u 20 -U 160 -s 100 -S 255 -v 200 -V 255")
+        run_command("python main.py -W 1280 -H 720 -u 20 -U 160 -s 100 -S 255 -v 200 -V 255")
 
         # Wait for a short time to allow the first command to terminate
         time.sleep(2)

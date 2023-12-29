@@ -1,7 +1,9 @@
 import sys
 import cv2
+import time
 import numpy
 import argparse
+from frame import PoseAnalyzer
 
 class LaserTracker(object):
 
@@ -160,7 +162,6 @@ class LaserTracker(object):
     
         cv2.add(self.trail, frame, self.trail)  # Use self.trail as the destination
         self.previous_position = center
-        # print("coordinates - ", coordinates)
 
         return coordinates
 
@@ -239,7 +240,7 @@ class LaserTracker(object):
             self.create_and_position_window('Saturation', 30, 30)
             self.create_and_position_window('Value', 40, 40)
 
-    def run(self):
+    def run(self, target_fps=30):
         self.setup_windows()
         self.capture = self.setup_camera_capture()
         frame_index = 0
@@ -247,6 +248,8 @@ class LaserTracker(object):
         laser_coordinates_list = []  # Initialize an empty list to store coordinates
 
         while True:
+            start_time = time.time()
+
             success, frame = self.capture.read()
             if not success:
                 sys.stderr.write("Could not read video frame. Quitting\n")
@@ -260,10 +263,17 @@ class LaserTracker(object):
             if coordinates is not None:
                 print("Laser Coordinates:", coordinates)
                 laser_coordinates_list.append(coordinates)
+                # Analyze and get the score
+                # parser = argparse.ArgumentParser(description="Process video with pose estimation.")
+                args = parser.parse_args()
+
+                pose_analyzer = PoseAnalyzer(args.video)
+                pose_analyzer.analyze()
+
 
                 # Check if the laser goes out of the screen
                 # x, y = coordinates
-                sys.exit(0)
+                # sys.exit(0)
 
             if self.first_detection_frame_index is None and cv2.countNonZero(self.channels['laser']) > 0:
                 self.first_detection_frame_index = frame_index
@@ -276,6 +286,15 @@ class LaserTracker(object):
                     f.write(f'Coordinates: {self.first_detection_coordinates}')
 
             frame_index += 1
+
+            # Calculate the time elapsed for processing the frame
+            elapsed_time = time.time() - start_time
+
+            # Calculate the delay needed to achieve the target frame rate
+            delay = int(max(1, (1.0 / target_fps - elapsed_time) * 1000))
+
+            # Introduce the delay
+            cv2.waitKey(delay)
 
 
 if __name__ == '__main__':
@@ -317,6 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--display',
                         action='store_true',
                         help='Display Threshold Windows')
+    parser.add_argument('--video', type=str, required=True, help='Path to the input video file.')
     # parser.add_argument('video_file', help='Input video file')
     params = parser.parse_args()
 
@@ -331,4 +351,4 @@ if __name__ == '__main__':
         val_max=params.valmax,
         display_thresholds=params.display
     )
-    tracker.run()
+    tracker.run(target_fps=30)
