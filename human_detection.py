@@ -1,55 +1,62 @@
 import cv2
 import mediapipe as mp
-import numpy as np
 
-from videoprops import get_video_properties
-props = get_video_properties('testvid.mp4')
-print(f'''
-Aspect ratio: {props['display_aspect_ratio']}
-''')
+def human_detection():
 
-# initialize mediapipe pose solution
-mp_pose = mp.solutions.pose
-mp_draw = mp.solutions.drawing_utils
-pose = mp_pose.Pose()
+    mp_pose = mp.solutions.pose
+    mp_draw = mp.solutions.drawing_utils
+    pose = mp_pose.Pose()
 
-# take video input for pose detection
-# you can put here video of your choice
-cap = cv2.VideoCapture("testvid.mp4")
+    cap = cv2.VideoCapture("wagya2.mp4")
 
-# take live camera  input for pose detection
-# cap = cv2.VideoCapture(0)
+    # Set the desired frame number
+    desired_frame_number = 1  # Change this to the frame number you want
 
-# read each frame/image from capture object
-while True:
-    ret, img = cap.read()
-    # resize image/frame so we can accommodate it on our screen
-    img = cv2.resize(img, (400, 800))
+    # Initialize a counter variable
+    frame_count = 0
 
-    # do Pose detection
-    results = pose.process(img)
-    # draw the detected pose on original video/ live stream
-    mp_draw.draw_landmarks(img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                           mp_draw.DrawingSpec((255, 0, 0), 2, 2), # Dots
-                           mp_draw.DrawingSpec((255, 0, 255), 5, 5) # rods
-                           )
-    # Display pose on original video/live stream
-    cv2.imshow("Pose Estimation", img)
+    while True:
+        ret, img = cap.read()
+        if not ret:
+            break
 
-    # Extract and draw pose on plain white image
-    h, w, c = img.shape   # get shape of original frame
-    opImg = np.zeros([h, w, c])  # create blank image with original frame size
-    opImg.fill(255)  # set white background. put 0 if you want to make it black
+        frame_count += 1
 
-    # draw extracted pose on black white image
-    mp_draw.draw_landmarks(opImg, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                           mp_draw.DrawingSpec((255, 0, 0), 2, 2),
-                           mp_draw.DrawingSpec((255, 0, 255), 2, 2)
-                           )
-    # display extracted pose on blank images
-    cv2.imshow("Extracted Pose", opImg)
+        if frame_count == desired_frame_number:
+            img = cv2.resize(img, (400, 800))
 
-    # print all landmarks
-    print(results.pose_landmarks)
+            results = pose.process(img)
 
-    cv2.waitKey(1)
+            if results.pose_landmarks:
+                # Get image dimensions
+                h, w, c = img.shape
+
+                # Extract 2D pixel coordinates of landmarks
+                landmark_px = []
+                for landmark in results.pose_landmarks.landmark:
+                    x = int(landmark.x * w)
+                    y = int(landmark.y * h)
+                    landmark_px.append((x, y))
+
+                # Print 2D pixel coordinates
+                print(f"Landmarks for frame {frame_count}:")
+                print(landmark_px)
+
+                # Draw the landmarks on the original image
+                mp_draw.draw_landmarks(img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
+                                    mp_draw.DrawingSpec((255, 0, 0), 2, 2),
+                                    mp_draw.DrawingSpec((255, 0, 255), 5, 5))
+
+                # Display pose on original video/live stream
+                cv2.imshow("Pose Estimation", img)
+
+                # Exit the loop after obtaining landmarks for the desired frame
+                break
+
+        cv2.waitKey(1)
+
+    # Release the video capture object
+    cap.release()
+    cv2.destroyAllWindows()
+    
+    return landmark_px
